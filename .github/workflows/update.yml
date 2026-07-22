@@ -1,0 +1,62 @@
+name: Update ghostel
+
+on:
+  schedule:
+    # Daily; upstream releases frequently.
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Update to the latest upstream release
+        run: nix run nixpkgs#nix-update -- --flake --version=stable ghostel
+
+      # nix-update cannot reach the zig.fetchDeps hash (its source position
+      # points into nixpkgs, not this flake), so realize the fixed-output
+      # derivation and splice in the hash Nix reports on mismatch.
+      - name: Repair zig deps hash
+        run: |
+          if ! nix build .#ghostel-module.deps --no-link 2> deps.log; then
+            got="$(grep -oP 'got:\s+\Ksha256-\S+' deps.log | head -n1)"
+            if [ -z "$got" ]; then
+              echo "deps build failed for a reason other than a hash mismatch:" >&2
+              cat deps.log >&2
+              exit 1
+            fi
+            old="$(nix eval --raw .#ghostel-module.deps.outputHash)"
+            sed -i "s|$old|$got|" package.nix
+            nix build .#ghostel-module.deps --no-link
+          fi
+          rm -f deps.log
+
+      - name: Detect changes
+        id: diff
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Pushes made with GITHUB_TOKEN do not trigger the CI workflow, so the
+      # update is build-gated here: a broken bump never lands on main.
+      - name: Build updated package
+        if: steps.diff.outputs.changed == 'true'
+        run: nix build .#ghostel --print-build-logs
+
+      - name: Commit and push
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          version="$(nix eval --raw .#ghostel.version)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "ghostel: update to ${version}"
+          git push
