@@ -102,6 +102,13 @@ whose `emacsWithDoom` re-applies emacs-overlay internally. Such rebuilds keep
 this flake's ghostel rather than silently falling back to the older
 `emacsPackages.ghostel` from nixpkgs.
 
+The flip side of that rebuild: like emacs-overlay itself, this overlay
+reconstructs the package set, which reverts *replacements* of existing Emacs
+packages made by earlier overlays via plain `overrideScope` attrs (packages
+*added* that way are unaffected). If another overlay replaces existing Emacs
+packages, list it after this one — or better, apply such replacements with
+`overrideScope` at the use site, which always composes cleanly.
+
 ### Try it without installing
 
 ```nix
