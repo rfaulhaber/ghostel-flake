@@ -5,23 +5,21 @@
   fetchFromGitHub,
   melpaBuild,
   stdenv,
-  zig_0_15,
+  zig_0_16,
   emacs,
   xcbuild,
-}:
-
-let
-  zig = zig_0_15;
+}: let
+  zig = zig_0_16;
 
   pname = "ghostel";
 
-  version = "0.45.0";
+  version = "0.47.0";
 
   src = fetchFromGitHub {
     owner = "dakra";
     repo = "ghostel";
     tag = "v${version}";
-    hash = "sha256-SY8tF7KqhlP49lgCvwH6TbVbeY+/gWryK2HVLWoqbpA=";
+    hash = "sha256-/58tIIzE+5an5Iv5DgFpeKWoM6hq9idf1LhP2iFYv9w=";
   };
 
   module = stdenv.mkDerivation (finalAttrs: {
@@ -32,10 +30,10 @@ let
     deps = zig.fetchDeps {
       inherit (finalAttrs) src pname version;
       fetchAll = true;
-      hash = "sha256-yrVgiofdmVjTGJ+PGPGRCc8gb/JcEca1uAzIoPgHHqU=";
+      hash = "sha256-NcNp0FnMy6FfZ63+pwiTRCmJ8FIovJEOhNvxVr1+uSQ=";
     };
 
-    nativeBuildInputs = [ zig ] ++ lib.optionals stdenv.hostPlatform.isDarwin [ xcbuild ];
+    nativeBuildInputs = [zig] ++ lib.optionals stdenv.hostPlatform.isDarwin [xcbuild];
 
     env.EMACS_INCLUDE_DIR = "${emacs}/include";
 
@@ -59,25 +57,25 @@ let
 
   libExt = stdenv.hostPlatform.extensions.sharedLibrary;
 in
-melpaBuild {
-  inherit pname version src;
+  melpaBuild {
+    inherit pname version src;
 
-  files = ''
-    (:defaults "etc" "ghostel-module${libExt}" "ghostel-module.version")
-  '';
+    files = ''
+      (:defaults "etc" "ghostel-module${libExt}" "ghostel-module.version")
+    '';
 
-  preBuild = ''
-    install ${module}/ghostel-module${libExt} ghostel-module${libExt}
-    install --mode=444 ${module}/ghostel-module.version ghostel-module.version
-  '';
+    preBuild = ''
+      install ${module}/ghostel-module${libExt} ghostel-module${libExt}
+      install --mode=444 ${module}/ghostel-module.version ghostel-module.version
+    '';
 
-  passthru = {
-    inherit module;
-  };
+    passthru = {
+      inherit module;
+    };
 
-  meta = {
-    homepage = "https://github.com/dakra/ghostel";
-    description = "Terminal emulator powered by libghostty";
-    license = lib.licenses.gpl3Plus;
-  };
-}
+    meta = {
+      homepage = "https://github.com/dakra/ghostel";
+      description = "Terminal emulator powered by libghostty";
+      license = lib.licenses.gpl3Plus;
+    };
+  }
