@@ -48,7 +48,8 @@ Add the input to your flake:
 
 > [!NOTE]
 > The overlay builds ghostel with *your* nixpkgs, which therefore needs to be
-> recent enough to provide `zig_0_15.fetchDeps` (nixos-unstable is fine).
+> recent enough to provide the Zig toolchain pinned in `package.nix`
+> (currently `zig_0_16`) and its `fetchDeps` (nixos-unstable is fine).
 
 ### NixOS / nix-darwin
 
@@ -92,6 +93,14 @@ nixpkgs.overlays = [
   inputs.ghostel.overlays.default
 ];
 ```
+
+The overlay injects ghostel through the `manualPackages` argument of nixpkgs'
+Emacs package scope, so it also survives consumers that *rebuild* the package
+set — notably
+[nix-doom-emacs-unstraightened](https://github.com/marienz/nix-doom-emacs-unstraightened),
+whose `emacsWithDoom` re-applies emacs-overlay internally. Such rebuilds keep
+this flake's ghostel rather than silently falling back to the older
+`emacsPackages.ghostel` from nixpkgs.
 
 ### Try it without installing
 
