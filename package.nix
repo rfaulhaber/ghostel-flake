@@ -13,13 +13,13 @@
 
   pname = "ghostel";
 
-  version = "0.48.0";
+  version = "0.49.0";
 
   src = fetchFromGitHub {
     owner = "dakra";
     repo = "ghostel";
     tag = "v${version}";
-    hash = "sha256-upIcL4wf2zAc3/3QeERF619nSDml2wEZCOl6/XOaT3E=";
+    hash = "sha256-jXJpPEPl9qHIYRxsXjcbJdiy4tcL4bvCn2VWAaGW81Y=";
   };
 
   module = stdenv.mkDerivation (finalAttrs: {
