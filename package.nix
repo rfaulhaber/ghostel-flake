@@ -13,13 +13,13 @@
 
   pname = "ghostel";
 
-  version = "0.53.0";
+  version = "0.54.0";
 
   src = fetchFromGitHub {
     owner = "dakra";
     repo = "ghostel";
     tag = "v${version}";
-    hash = "sha256-ZzRf/3QoG499S2bJhA+wnphqX0KDiY+Pe7yENKh8AV4=";
+    hash = "sha256-IzMa6jAmtrz7gSvQ4g6l02A/DYUvBr5D5B6mXPtFBm8=";
   };
 
   module = stdenv.mkDerivation (finalAttrs: {
@@ -30,7 +30,7 @@
     deps = zig.fetchDeps {
       inherit (finalAttrs) src pname version;
       fetchAll = true;
-      hash = "sha256-NcNp0FnMy6FfZ63+pwiTRCmJ8FIovJEOhNvxVr1+uSQ=";
+      hash = "sha256-87q0nSOkZaIHW8Ztgf5pR13sHNw7eQKJhu12QjRMTvA=";
     };
 
     nativeBuildInputs = [zig] ++ lib.optionals stdenv.hostPlatform.isDarwin [xcbuild];
