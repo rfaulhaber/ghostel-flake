@@ -5,21 +5,21 @@
   fetchFromGitHub,
   melpaBuild,
   stdenv,
-  zig_0_16,
+  zig_0_17,
   emacs,
   xcbuild,
 }: let
-  zig = zig_0_16;
+  zig = zig_0_17;
 
   pname = "ghostel";
 
-  version = "0.59.0";
+  version = "0.60.0";
 
   src = fetchFromGitHub {
     owner = "dakra";
     repo = "ghostel";
     tag = "v${version}";
-    hash = "sha256-1eIMfkPrczsirteuN3uM4axj8ZW3pt0TpPG+Lpos2uU=";
+    hash = "sha256-k10nzaIHKGvPJoI1KiiDBY6yDTKL2OAXZ1kxx91BB3E=";
   };
 
   module = stdenv.mkDerivation (finalAttrs: {
@@ -30,7 +30,7 @@
     deps = zig.fetchDeps {
       inherit (finalAttrs) src pname version;
       fetchAll = true;
-      hash = "sha256-BZzOCIY/3kkpYN115YLeu8snFqW77cJBXF+z+cpNYLk=";
+      hash = "sha256-Kt3r1B/5kgjMO89gih/87oEtuWmby9NB6oQp5t0vUYw=";
     };
 
     nativeBuildInputs = [zig] ++ lib.optionals stdenv.hostPlatform.isDarwin [xcbuild];
