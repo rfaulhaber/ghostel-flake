@@ -16,26 +16,58 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
 
+      # Bumped by hand rather than with nix-update: nix-update 1.16.0 reads the
+      # flake's store path from `nix flake metadata`, which Nix >= 2.35 no
+      # longer materializes, so it fails with "opening file /nix/store/...-source:
+      # No such file or directory" (Mic92/nix-update#693).
       - name: Update to the latest upstream release
-        run: nix run nixpkgs#nix-update -- --flake --version=stable ghostel
-
-      # nix-update cannot reach the zig.fetchDeps hash (its source position
-      # points into nixpkgs, not this flake), so realize the fixed-output
-      # derivation and splice in the hash Nix reports on mismatch.
-      - name: Repair zig deps hash
         run: |
-          if ! nix build .#ghostel-module.deps --no-link 2> deps.log; then
-            got="$(grep -oP 'got:\s+\Ksha256-\S+' deps.log | head -n1)"
-            if [ -z "$got" ]; then
-              echo "deps build failed for a reason other than a hash mismatch:" >&2
-              cat deps.log >&2
-              exit 1
-            fi
-            old="$(nix eval --raw .#ghostel-module.deps.outputHash)"
-            sed -i "s|$old|$got|" package.nix
-            nix build .#ghostel-module.deps --no-link
+          current="$(nix eval --raw .#ghostel.version)"
+          latest="$(git ls-remote --tags --refs https://github.com/dakra/ghostel 'v*' \
+            | sed 's|.*refs/tags/v||' \
+            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' \
+            | sort -V | tail -n1)"
+          if [ -z "$latest" ]; then
+            echo "no stable release tags found upstream" >&2
+            exit 1
           fi
-          rm -f deps.log
+          echo "current: ${current}, latest: ${latest}"
+          # Only move forward; also a no-op when already up to date.
+          if [ "$(printf '%s\n%s\n' "$current" "$latest" | sort -V | tail -n1)" = "$current" ]; then
+            exit 0
+          fi
+          sed -i "s|version = \"${current}\";|version = \"${latest}\";|" package.nix
+
+          # Reset both fixed-output hashes to placeholders: keeping a stale hash
+          # could let Nix reuse the old store path instead of fetching anew.
+          # The placeholders differ so the repair step can replace each alone.
+          src_old="$(nix eval --raw .#ghostel.src.outputHash)"
+          deps_old="$(nix eval --raw .#ghostel-module.deps.outputHash)"
+          sed -i \
+            -e "s|${src_old}|sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=|" \
+            -e "s|${deps_old}|sha256-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBA=|" \
+            package.nix
+
+      # Realize each fixed-output derivation (src first, since deps are fetched
+      # from it) and splice in the hash Nix reports on mismatch. nix-update could
+      # not reach the zig.fetchDeps hash anyway (its source position points
+      # into nixpkgs, not this flake).
+      - name: Repair fixed-output hashes
+        run: |
+          for attr in ghostel.src ghostel-module.deps; do
+            if ! nix build ".#${attr}" --no-link 2> fod.log; then
+              got="$(grep -oP 'got:\s+\Ksha256-\S+' fod.log | head -n1)"
+              if [ -z "$got" ]; then
+                echo "${attr} failed for a reason other than a hash mismatch:" >&2
+                cat fod.log >&2
+                exit 1
+              fi
+              old="$(nix eval --raw ".#${attr}.outputHash")"
+              sed -i "s|${old}|${got}|" package.nix
+              nix build ".#${attr}" --no-link
+            fi
+          done
+          rm -f fod.log
 
       - name: Detect changes
         id: diff
